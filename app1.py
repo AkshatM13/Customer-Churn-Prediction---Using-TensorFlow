@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -9,6 +10,20 @@ st.set_page_config(
     page_title="Customer Churn Prediction",
     page_icon="📊",
     layout="wide",
+)
+
+# Background banner
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #f5f5f5;
+        background-image: linear-gradient(180deg, #e0f7fa, #80deea);
+        padding: 20px;
+        border-radius: 8px;
+    }
+    </style>
+    """, unsafe_allow_html=True
 )
 
 # Load and preprocess data
@@ -47,14 +62,10 @@ model.fit(X_train, y_train)
 features = X.columns
 
 # App Header
-st.markdown("<h1 style='text-align: center; color: #4CAF50;'>📊 Customer Churn Prediction App</h1>", unsafe_allow_html=True)
-st.write(
-    "This application predicts whether a customer will **churn** based on various attributes. "
-    "Please provide the necessary details in the sidebar and click **Predict Churn**."
-)
+st.markdown("<h1 style='text-align: center; color: #00796b;'>📊 Customer Churn Prediction App</h1>", unsafe_allow_html=True)
 
 # Sidebar for User Input
-st.sidebar.header("📋 Customer Details")
+st.sidebar.header("📋 Enter Customer Details")
 def user_input():
     data = {
         'tenure': st.sidebar.slider("Tenure (Months)", min_value=0, max_value=100, value=10),
@@ -90,7 +101,6 @@ def user_input():
         "Credit card (automatic)": 3
     }[data['PaymentMethod']]
 
-    # Convert input to DataFrame
     return pd.DataFrame(data, index=[0])
 
 input_df = user_input()
@@ -104,16 +114,21 @@ input_df[['tenure', 'MonthlyCharges', 'TotalCharges']] = scaler.transform(
 # Prediction Button and Output
 if st.sidebar.button("Predict Churn"):
     prediction = model.predict(input_df)
-    result = "Churn" if prediction[0] == 1 else "No Churn"
+    probability = model.predict_proba(input_df)[0][1] * 100  # Churn probability
     
-    # Display result with color formatting
-    if result == "Churn":
-        st.markdown(
-            f"<h2 style='text-align: center; color: red;'>⚠️ Prediction: {result}</h2>", 
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            f"<h2 style='text-align: center; color: green;'>✅ Prediction: {result}</h2>", 
-            unsafe_allow_html=True
-        )
+    # Gauge Chart for Churn Probability
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=probability,
+        title={"text": "Churn Probability (%)"},
+        gauge={
+            "axis": {"range": [0, 100]},
+            "bar": {"color": "red" if probability > 50 else "green"},
+        }
+    ))
+
+    st.plotly_chart(fig)
+
+    # Display Prediction Result
+    result = "Churn" if prediction[0] == 1 else "No Churn"
+    st.markdown(f"<h2 style='text-align: center; color: {'red' if result == 'Churn' else 'green'};'>Prediction: {result}</h2>", unsafe_allow_html=True)
