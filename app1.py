@@ -1,29 +1,15 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
 # Page Configuration
 st.set_page_config(
     page_title="Customer Churn Prediction",
     page_icon="📊",
     layout="wide",
-)
-
-# Background banner
-st.markdown(
-    """
-    <style>
-    .main {
-        background-color: #f5f5f5;
-        background-image: linear-gradient(180deg, #e0f7fa, #80deea);
-        padding: 20px;
-        border-radius: 8px;
-    }
-    </style>
-    """, unsafe_allow_html=True
 )
 
 # Load and preprocess data
@@ -58,11 +44,21 @@ X_test[['tenure', 'MonthlyCharges', 'TotalCharges']] = scaler.transform(X_test[[
 model = LogisticRegression()
 model.fit(X_train, y_train)
 
-# Get feature names for reindexing user input
-features = X.columns
+# Model evaluation
+accuracy = model.score(X_test, y_test)
+st.write(f"Model Accuracy: {accuracy * 100:.2f}%")
 
-# App Header
-st.markdown("<h1 style='text-align: center; color: #00796b;'>📊 Customer Churn Prediction App</h1>", unsafe_allow_html=True)
+# Confusion matrix
+y_pred = model.predict(X_test)
+cm = confusion_matrix(y_test, y_pred)
+st.write("Confusion Matrix:")
+st.write(cm)
+
+# Classification report
+report = classification_report(y_test, y_pred, output_dict=True)
+report_df = pd.DataFrame(report).transpose()
+st.write("Classification Report:")
+st.write(report_df)
 
 # Sidebar for User Input
 st.sidebar.header("📋 Enter Customer Details")
@@ -106,7 +102,7 @@ def user_input():
 input_df = user_input()
 
 # Ensure input DataFrame matches the training feature structure
-input_df = input_df.reindex(columns=features, fill_value=0)
+input_df = input_df.reindex(columns=X.columns, fill_value=0)
 input_df[['tenure', 'MonthlyCharges', 'TotalCharges']] = scaler.transform(
     input_df[['tenure', 'MonthlyCharges', 'TotalCharges']]
 )
@@ -114,21 +110,9 @@ input_df[['tenure', 'MonthlyCharges', 'TotalCharges']] = scaler.transform(
 # Prediction Button and Output
 if st.sidebar.button("Predict Churn"):
     prediction = model.predict(input_df)
-    probability = model.predict_proba(input_df)[0][1] * 100  # Churn probability
+    probability = model.predict_proba(input_df)[0][1] * 100  
     
-    # Gauge Chart for Churn Probability
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=probability,
-        title={"text": "Churn Probability (%)"},
-        gauge={
-            "axis": {"range": [0, 100]},
-            "bar": {"color": "red" if probability > 50 else "green"},
-        }
-    ))
-
-    st.plotly_chart(fig)
-
     # Display Prediction Result
     result = "Churn" if prediction[0] == 1 else "No Churn"
-    st.markdown(f"<h2 style='text-align: center; color: {'red' if result == 'Churn' else 'green'};'>Prediction: {result}</h2>", unsafe_allow_html=True)
+    st.write(f"### Prediction: {result}")
+    st.write(f"### Churn Probability: {probability:.2f}%")
