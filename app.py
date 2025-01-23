@@ -100,11 +100,9 @@ st.subheader("Model Performance on Test Set")
 y_pred = model.predict(X_test)
 y_pred_classes = (y_pred > 0.5).astype(int)
 
-cm = confusion_matrix(y_test, y_pred_classes)
+
 cr = classification_report(y_test, y_pred_classes)
 
-st.write("Confusion Matrix")
-st.write(pd.DataFrame(cm, columns=['No Churn', 'Churn'], index=['No Churn', 'Churn']))
 
 st.write("Classification Report")
 st.text(cr)
